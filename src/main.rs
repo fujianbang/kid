@@ -1,3 +1,5 @@
+mod lox;
+
 fn main() {
-    println!("Hello, world!");
+    println!("{:?}", std::env::current_dir());
 }
