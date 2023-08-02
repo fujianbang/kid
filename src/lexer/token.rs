@@ -1,10 +1,10 @@
 #[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 pub(super) enum Token {
     ILLEGAL,
+    IDENT(String),
     Keyword(KeywordToken),
     Delimiter(DelimiterToken),
     Operator(OperatorToken),
-    IDENTIFIER(String),
     Literal(LiteralToken),
 }
 
