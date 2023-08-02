@@ -60,7 +60,7 @@ impl From<&str> for Scanner {
             last: 0,
             current: 0,
             line: 1,
-            ch: 0,
+            ch: 0 as char,
         }
     }
 }

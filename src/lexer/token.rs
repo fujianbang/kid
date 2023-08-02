@@ -1,5 +1,5 @@
 #[allow(non_camel_case_types, clippy::upper_case_acronyms)]
-pub enum Token {
+pub(super) enum Token {
     ILLEGAL,
     Keyword(KeywordToken),
     Delimiter(DelimiterToken),
