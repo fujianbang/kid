@@ -41,7 +41,7 @@ impl Scanner {
         self.current += 1;
     }
 
-    fn next_token(&self) -> Token {
+    fn next_token(&mut self) -> Token {
         match self.ch {
             '+' => Token::Operator(OperatorToken::Add),
             '-' => Token::Operator(OperatorToken::Sub),
@@ -93,7 +93,8 @@ impl From<&str> for Scanner {
 
 
 #[cfg(test)]
-mod test_case {
+mod test_cases {
+    use crate::lexer::token::LiteralToken;
     use super::*;
 
     #[test]
@@ -108,7 +109,53 @@ let add = fun(a, b) {
 
 let result = add(five, ten);
         "#;
-        println!("{}", source);
+
+        let test_cases = vec![
+            Token::Keyword(KeywordToken::LET),
+            Token::IDENT(String::from("five")),
+            Token::Operator(OperatorToken::EQUAL),
+            Token::Literal(LiteralToken::INT(5)),
+            Token::Delimiter(DelimiterToken::SEMICOLON),
+            Token::Keyword(KeywordToken::LET),
+            Token::IDENT(String::from("ten")),
+            Token::Operator(OperatorToken::EQUAL),
+            Token::Literal(LiteralToken::INT(10)),
+            Token::Delimiter(DelimiterToken::SEMICOLON),
+            Token::Keyword(KeywordToken::LET),
+            Token::IDENT(String::from("add")),
+            Token::Operator(OperatorToken::EQUAL),
+            Token::Keyword(KeywordToken::FN),
+            Token::Delimiter(DelimiterToken::LEFT_PAREN),
+            Token::IDENT(String::from("a")),
+            Token::Delimiter(DelimiterToken::COMMA),
+            Token::IDENT(String::from("b")),
+            Token::Delimiter(DelimiterToken::RIGHT_PAREN),
+            Token::Delimiter(DelimiterToken::LEFT_BRACE),
+            Token::Keyword(KeywordToken::RETURN),
+            Token::IDENT(String::from("a")),
+            Token::Operator(OperatorToken::Add),
+            Token::IDENT(String::from("b")),
+            Token::Delimiter(DelimiterToken::SEMICOLON),
+            Token::Delimiter(DelimiterToken::RIGHT_BRACE),
+            Token::Delimiter(DelimiterToken::SEMICOLON),
+            Token::Keyword(KeywordToken::LET),
+            Token::IDENT(String::from("result")),
+            Token::Operator(OperatorToken::EQUAL),
+            Token::IDENT(String::from("add")),
+            Token::Delimiter(DelimiterToken::LEFT_PAREN),
+            Token::IDENT(String::from("five")),
+            Token::Delimiter(DelimiterToken::COMMA),
+            Token::IDENT(String::from("ten")),
+            Token::Delimiter(DelimiterToken::RIGHT_PAREN),
+            Token::Delimiter(DelimiterToken::SEMICOLON),
+            Token::Keyword(KeywordToken::EOF),
+        ];
+
+        let mut s = Scanner::new(source);
+        for test_case in test_cases {
+            let token = s.next_token();
+            assert_eq!(test_case, token);
+        }
     }
 
     #[test]

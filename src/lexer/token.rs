@@ -1,4 +1,5 @@
 #[allow(non_camel_case_types, clippy::upper_case_acronyms)]
+#[derive(Debug, Clone, PartialEq)]
 pub(super) enum Token {
     ILLEGAL,
     IDENT(String),
@@ -9,6 +10,7 @@ pub(super) enum Token {
 }
 
 #[allow(non_camel_case_types)]
+#[derive(Debug, Clone, PartialEq)]
 pub(super) enum KeywordToken {
     LET,
     FN,
@@ -21,6 +23,7 @@ pub(super) enum KeywordToken {
 }
 
 #[allow(non_camel_case_types)]
+#[derive(Debug, Clone, PartialEq)]
 pub(super) enum DelimiterToken {
     /// (
     LEFT_PAREN,
@@ -39,6 +42,7 @@ pub(super) enum DelimiterToken {
 }
 
 #[allow(non_camel_case_types)]
+#[derive(Debug, Clone, PartialEq)]
 pub(super) enum OperatorToken {
     /// +
     Add,
@@ -72,6 +76,7 @@ pub(super) enum OperatorToken {
     LESS_EQUAL,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub(super) enum LiteralToken {
     INT(i64),
     FLOAT(f64),
