@@ -1,13 +1,5 @@
 use crate::lexer::token::{Token, OperatorToken, DelimiterToken, KeywordToken};
 
-use nom::{
-    IResult,
-    sequence::delimited,
-    // character::complete::char,
-    bytes::complete::is_not,
-    branch::alt,
-};
-
 #[derive(Debug, Clone)]
 struct Scanner {
     source: String,
@@ -24,7 +16,7 @@ impl Scanner {
         s.read_char();
         s
     }
-
+g
     /// read next char
     fn read_char(&mut self) {
         if self.current >= self.source.len() {
