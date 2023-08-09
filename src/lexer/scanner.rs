@@ -1,4 +1,3 @@
-use crate::lexer::error::LexerError;
 use crate::lexer::token::{Token, OperatorToken, DelimiterToken, KeywordToken};
 
 #[derive(Debug, Clone)]
@@ -7,7 +6,6 @@ struct Scanner {
     last: usize,
     current: usize,
     line: usize,
-    ch: char,
 }
 
 impl Scanner {
@@ -17,20 +15,21 @@ impl Scanner {
         s
     }
 
-    /// read next char
-    fn read_char(&mut self) {
+    /// read next char and update current char position
+    fn read_char(&mut self) -> char {
         if self.current >= self.source.len() {
-            self.ch = 0 as char;
-        } else {
-            let c = self.source.chars().nth(self.current);
-            self.ch = match c {
-                Some(v) => v,
-                None => 0 as char,
-            }
+            return 0 as char;
         }
 
+
+        let c = self.source.chars().nth(self.current);
         self.last = self.current;
         self.current += 1;
+
+        match c {
+            Some(v) => v,
+            None => 0 as char,
+        }
     }
 
     /// retrieve the next Token
@@ -40,12 +39,11 @@ impl Scanner {
             return Ok(Token::Keyword(KeywordToken::EOF));
         }
 
-        self.read_char();
+        let ch = self.read_char();
         println!("last: {}, current: {}, line: {}, ch: {}",
-                 self.last, self.current, self.line,
-                 self.ch);
+                 self.last, self.current, self.line, ch);
 
-        match self.ch {
+        match ch {
             '+' => Ok(Token::Operator(OperatorToken::Add)),
             '-' => Ok(Token::Operator(OperatorToken::Sub)),
             '*' => Ok(Token::Operator(OperatorToken::STAR)),
@@ -60,20 +58,45 @@ impl Scanner {
             ',' => Ok(Token::Delimiter(DelimiterToken::COMMA)),
             '.' => Ok(Token::Delimiter(DelimiterToken::DOT)),
             _ => {
-                if is_letter(self.ch) {
+                if is_letter(ch) {
                     return Ok(Token::IDENT(self.read_ident()));
                 }
 
                 // cannot parse so return error
-                Err(anyhow::anyhow!("InvalidCharacter: {}", self.ch))
+                Err(anyhow::anyhow!("InvalidCharacter: {}", ch))
             }
         }
     }
 
+    /// read identifier
     fn read_ident(&mut self) -> String {
-        let pos = self.current;
-        // TODO
+        let _pos = self.current;
+
         return String::from("");
+    }
+
+    /// lookahead
+    fn peek(&self) -> char {
+        if self.current >= self.source.len() {
+            return 0 as char;
+        }
+        let c = self.source.chars().nth(self.current);
+        match c {
+            Some(v) => v,
+            None => 0 as char,
+        }
+    }
+
+    /// peek next
+    fn peek_next(&self) -> char {
+        if self.current + 1 >= self.source.len() {
+            return 0 as char;
+        }
+        let c = self.source.chars().nth(self.current + 1);
+        match c {
+            Some(v) => v,
+            None => 0 as char,
+        }
     }
 
     fn is_at_end(&self) -> bool {
@@ -92,7 +115,6 @@ impl From<&str> for Scanner {
             last: 0,
             current: 0,
             line: 1,
-            ch: Default::default(),
         }
     }
 }
@@ -100,7 +122,6 @@ impl From<&str> for Scanner {
 
 #[cfg(test)]
 mod test_cases {
-    use crate::lexer::token::LiteralToken;
     use super::*;
 
     #[test]
