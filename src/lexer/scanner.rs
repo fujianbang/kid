@@ -1,4 +1,4 @@
-use crate::lexer::token::{Token, OperatorToken, DelimiterToken, KeywordToken};
+use super::token::*;
 
 #[derive(Debug, Clone)]
 struct Scanner {
@@ -11,8 +11,13 @@ struct Scanner {
 impl Scanner {
     /// create new lexer scanner
     fn new(input: &str) -> Self {
-        let s = Scanner::from(input);
-        s
+        let source = input.to_string();
+        Self {
+            source,
+            last: 0,
+            current: 0,
+            line: 1,
+        }
     }
 
     /// read next char and update current char position
@@ -20,7 +25,6 @@ impl Scanner {
         if self.current >= self.source.len() {
             return 0 as char;
         }
-
 
         let c = self.source.chars().nth(self.current);
         self.last = self.current;
@@ -33,49 +37,130 @@ impl Scanner {
     }
 
     /// retrieve the next Token
-    fn next_token(&mut self) -> anyhow::Result<Token> {
+    fn next_token(&mut self) -> Option<Token> {
         if self.is_at_end() {
             println!("EOF");
-            return Ok(Token::Keyword(KeywordToken::EOF));
+            return None;
         }
 
         let ch = self.read_char();
-        println!("last: {}, current: {}, line: {}, ch: {}",
-                 self.last, self.current, self.line, ch);
+        println!("ch: {:?}", ch);
 
         match ch {
-            '+' => Ok(Token::Operator(OperatorToken::Add)),
-            '-' => Ok(Token::Operator(OperatorToken::Sub)),
-            '*' => Ok(Token::Operator(OperatorToken::STAR)),
-            '/' => Ok(Token::Operator(OperatorToken::SLASH)),
-            '%' => Ok(Token::Operator(OperatorToken::REM)),
-            '=' => Ok(Token::Operator(OperatorToken::EQUAL)),
-            ';' => Ok(Token::Delimiter(DelimiterToken::SEMICOLON)),
-            '(' => Ok(Token::Delimiter(DelimiterToken::LEFT_PAREN)),
-            ')' => Ok(Token::Delimiter(DelimiterToken::RIGHT_PAREN)),
-            '{' => Ok(Token::Delimiter(DelimiterToken::LEFT_BRACE)),
-            '}' => Ok(Token::Delimiter(DelimiterToken::RIGHT_BRACE)),
-            ',' => Ok(Token::Delimiter(DelimiterToken::COMMA)),
-            '.' => Ok(Token::Delimiter(DelimiterToken::DOT)),
+            ' ' | '\t' | '\r' => self.next_token(),
+            '\n' => {
+                self.line += 1;
+                self.next_token()
+            }
+            '+' => Some(Token::Operator(OperatorToken::Add)),
+            '-' => Some(Token::Operator(OperatorToken::Sub)),
+            '*' => Some(Token::Operator(OperatorToken::STAR)),
+            '/' => Some(Token::Operator(OperatorToken::SLASH)),
+            '%' => Some(Token::Operator(OperatorToken::REM)),
+            '=' => {
+                if self.peek() == '=' {
+                    self.read_char();
+                    Some(Token::Operator(OperatorToken::EQUAL_EQUAL))
+                } else {
+                    Some(Token::Operator(OperatorToken::EQUAL))
+                }
+            }
+            '!' => {
+                if self.peek() == '=' {
+                    self.read_char();
+                    Some(Token::Operator(OperatorToken::BANG_EQUAL))
+                } else {
+                    Some(Token::Operator(OperatorToken::BANG))
+                }
+            }
+            '>' => {
+                if self.peek() == '=' {
+                    self.read_char();
+                    Some(Token::Operator(OperatorToken::GREATER_EQUAL))
+                } else {
+                    Some(Token::Operator(OperatorToken::GREATER))
+                }
+            }
+            '<' => {
+                if self.peek() == '=' {
+                    self.read_char();
+                    Some(Token::Operator(OperatorToken::LESS_EQUAL))
+                } else {
+                    Some(Token::Operator(OperatorToken::LESS))
+                }
+            }
+            ';' => Some(Token::Delimiter(DelimiterToken::SEMICOLON)),
+            '(' => Some(Token::Delimiter(DelimiterToken::LEFT_PAREN)),
+            ')' => Some(Token::Delimiter(DelimiterToken::RIGHT_PAREN)),
+            '{' => Some(Token::Delimiter(DelimiterToken::LEFT_BRACE)),
+            '}' => Some(Token::Delimiter(DelimiterToken::RIGHT_BRACE)),
+            ',' => Some(Token::Delimiter(DelimiterToken::COMMA)),
+            '.' => Some(Token::Delimiter(DelimiterToken::DOT)),
+            '"' => {
+                let token = self.parse_string();
+                Some(token)
+            }
             _ => {
-                if is_letter(ch) {
-                    return Ok(Token::IDENT(self.read_ident()));
+                println!("ch: {:?}", ch);
+                // check if keywork
+                if ch.is_alphabetic() {
+                    let start = self.current - 1;
+
+                    while self.peek().is_alphabetic() {
+                        self.read_char();
+                    }
+
+                    let plain = self.source.get(start..self.current).unwrap();
+
+                    println!(
+                        "plain: {:?}, start: {}, current: {}",
+                        plain, start, self.current
+                    );
+
+                    if let Some(keyword) = is_keyword(plain) {
+                        return Some(Token::Keyword(keyword));
+                    }
+                    // default is identifier
+                    return Some(self.parse_identifier());
                 }
 
-                // cannot parse so return error
-                Err(anyhow::anyhow!("InvalidCharacter: {}", ch))
+                None
             }
         }
     }
 
-    /// read identifier
-    fn read_ident(&mut self) -> String {
-        let _pos = self.current;
+    fn parse_string(&mut self) -> Token {
+        let mut s = String::new();
+        while self.peek() != '"' {
+            println!("peek: {:?}", self.peek());
+            if self.peek() == '\n' {
+                self.line += 1;
+            }
+            if self.peek() == 0 as char {
+                // TODO if at end of file, return error
+                panic!("unexpected end of source");
+            }
+            s.push(self.read_char());
+        }
 
-        return String::from("");
+        self.read_char(); // consume the closing '"'
+        Token::Literal(LiteralToken::STRING(s))
     }
 
-    /// lookahead
+    /// read identifier
+    fn parse_identifier(&mut self) -> Token {
+        let _pos = self.current;
+
+        // read until whitespace
+        while self.peek().is_alphanumeric() {
+            self.read_char();
+        }
+
+        let s = String::from(self.source.get(self.last..self.current).unwrap());
+        Token::Ident(s)
+    }
+
+    /// lookup current char
     fn peek(&self) -> char {
         if self.current >= self.source.len() {
             return 0 as char;
@@ -104,8 +189,20 @@ impl Scanner {
     }
 }
 
-fn is_letter(c: char) -> bool {
-    ('a'..='z').contains(&c) || ('A'..='Z').contains(&c) || c == '_'
+/// check if string is a keyword
+/// if yes, return Token.
+/// if not, return None
+fn is_keyword(s: &str) -> Option<KeywordToken> {
+    match s {
+        "let" => Some(KeywordToken::LET),
+        "fn" => Some(KeywordToken::FN),
+        "if" => Some(KeywordToken::IF),
+        "else" => Some(KeywordToken::ELSE),
+        "return" => Some(KeywordToken::RETURN),
+        "true" => Some(KeywordToken::TRUE),
+        "false" => Some(KeywordToken::FALSE),
+        _ => None,
+    }
 }
 
 impl From<&str> for Scanner {
@@ -119,23 +216,18 @@ impl From<&str> for Scanner {
     }
 }
 
-
 #[cfg(test)]
 mod test_cases {
     use super::*;
 
     #[test]
-    fn test_single_char_token() {
+    fn test_single_operators_tokens() {
         let source = "+-*/%=";
 
         let mut scanner = Scanner::new(source);
         let mut tokens = vec![];
-        loop {
-            let token = scanner.next_token();
-            let token = token.unwrap();
-            if token == Token::Keyword(KeywordToken::EOF) {
-                break;
-            }
+
+        while let Some(token) = scanner.next_token() {
             tokens.push(token);
         }
 
@@ -150,91 +242,96 @@ mod test_cases {
         assert_eq!(tokens, expected);
     }
 
-    // #[test]
-    // fn test_simple_statement() {
-    //     let source = "let a = \"lower case letter 'a'";
-    //
-    //     let expected = vec![
-    //         Token::Keyword(KeywordToken::LET),
-    //         Token::IDENT("a".to_string()),
-    //         Token::Operator(OperatorToken::EQUAL),
-    //         Token::Literal(LiteralToken::STRING("lower case letter 'a'".to_string())),
-    //         Token::Delimiter(DelimiterToken::SEMICOLON),
-    //     ];
-    //
-    //     let mut scanner = Scanner::new(source);
-    //     let mut tokens = vec![];
-    //     loop {
-    //         let token = scanner.next_token().unwrap();
-    //         if token == Token::Keyword(KeywordToken::EOF) {
-    //             break;
-    //         }
-    //         tokens.push(token);
-    //     }
-    //
-    //     assert_eq!(tokens, expected);
-    // }
+    #[test]
+    fn test_parse_keyword() {
+        let source = "let";
+        let mut scanner = Scanner::new(source);
+        let token = scanner.next_token().unwrap();
+        assert_eq!(token, Token::Keyword(KeywordToken::LET));
+    }
 
-//     #[test]
-//     fn test_basic_tokens() {
-//         let source = r#"
-// let five = 5;
-// let ten = 10;
-//
-// let add = fun(a, b) {
-//     return a + b;
-// };
-//
-// let result = add(five, ten);
-//         "#;
-//
-//         let test_cases = vec![
-//             Token::Keyword(KeywordToken::LET),
-//             Token::IDENT(String::from("five")),
-//             Token::Operator(OperatorToken::EQUAL),
-//             Token::Literal(LiteralToken::INT(5)),
-//             Token::Delimiter(DelimiterToken::SEMICOLON),
-//             Token::Keyword(KeywordToken::LET),
-//             Token::IDENT(String::from("ten")),
-//             Token::Operator(OperatorToken::EQUAL),
-//             Token::Literal(LiteralToken::INT(10)),
-//             Token::Delimiter(DelimiterToken::SEMICOLON),
-//             Token::Keyword(KeywordToken::LET),
-//             Token::IDENT(String::from("add")),
-//             Token::Operator(OperatorToken::EQUAL),
-//             Token::Keyword(KeywordToken::FN),
-//             Token::Delimiter(DelimiterToken::LEFT_PAREN),
-//             Token::IDENT(String::from("a")),
-//             Token::Delimiter(DelimiterToken::COMMA),
-//             Token::IDENT(String::from("b")),
-//             Token::Delimiter(DelimiterToken::RIGHT_PAREN),
-//             Token::Delimiter(DelimiterToken::LEFT_BRACE),
-//             Token::Keyword(KeywordToken::RETURN),
-//             Token::IDENT(String::from("a")),
-//             Token::Operator(OperatorToken::Add),
-//             Token::IDENT(String::from("b")),
-//             Token::Delimiter(DelimiterToken::SEMICOLON),
-//             Token::Delimiter(DelimiterToken::RIGHT_BRACE),
-//             Token::Delimiter(DelimiterToken::SEMICOLON),
-//             Token::Keyword(KeywordToken::LET),
-//             Token::IDENT(String::from("result")),
-//             Token::Operator(OperatorToken::EQUAL),
-//             Token::IDENT(String::from("add")),
-//             Token::Delimiter(DelimiterToken::LEFT_PAREN),
-//             Token::IDENT(String::from("five")),
-//             Token::Delimiter(DelimiterToken::COMMA),
-//             Token::IDENT(String::from("ten")),
-//             Token::Delimiter(DelimiterToken::RIGHT_PAREN),
-//             Token::Delimiter(DelimiterToken::SEMICOLON),
-//             Token::Keyword(KeywordToken::EOF),
-//         ];
-//
-//         let mut s = Scanner::new(source);
-//         for test_case in test_cases {
-//             let token = s.next_token();
-//             assert_eq!(test_case, token);
-//         }
-//     }
+    #[test]
+    fn test_simple_statement() {
+        let source = "let a = \"lower case letter 'a'\";";
+
+        let expected = vec![
+            Token::Keyword(KeywordToken::LET),
+            Token::Ident("a".to_string()),
+            Token::Operator(OperatorToken::EQUAL),
+            Token::Literal(LiteralToken::STRING("lower case letter 'a'".to_string())),
+            Token::Delimiter(DelimiterToken::SEMICOLON),
+        ];
+
+        let mut scanner = Scanner::new(source);
+        let mut tokens = vec![];
+
+        while let Some(token) = scanner.next_token() {
+            tokens.push(token);
+        }
+
+        assert_eq!(tokens, expected);
+    }
+
+    //     #[test]
+    //     fn test_basic_tokens() {
+    //         let source = r#"
+    // let five = 5;
+    // let ten = 10;
+    //
+    // let add = fun(a, b) {
+    //     return a + b;
+    // };
+    //
+    // let result = add(five, ten);
+    //         "#;
+    //
+    //         let test_cases = vec![
+    //             Token::Keyword(KeywordToken::LET),
+    //             Token::IDENT(String::from("five")),
+    //             Token::Operator(OperatorToken::EQUAL),
+    //             Token::Literal(LiteralToken::INT(5)),
+    //             Token::Delimiter(DelimiterToken::SEMICOLON),
+    //             Token::Keyword(KeywordToken::LET),
+    //             Token::IDENT(String::from("ten")),
+    //             Token::Operator(OperatorToken::EQUAL),
+    //             Token::Literal(LiteralToken::INT(10)),
+    //             Token::Delimiter(DelimiterToken::SEMICOLON),
+    //             Token::Keyword(KeywordToken::LET),
+    //             Token::IDENT(String::from("add")),
+    //             Token::Operator(OperatorToken::EQUAL),
+    //             Token::Keyword(KeywordToken::FN),
+    //             Token::Delimiter(DelimiterToken::LEFT_PAREN),
+    //             Token::IDENT(String::from("a")),
+    //             Token::Delimiter(DelimiterToken::COMMA),
+    //             Token::IDENT(String::from("b")),
+    //             Token::Delimiter(DelimiterToken::RIGHT_PAREN),
+    //             Token::Delimiter(DelimiterToken::LEFT_BRACE),
+    //             Token::Keyword(KeywordToken::RETURN),
+    //             Token::IDENT(String::from("a")),
+    //             Token::Operator(OperatorToken::Add),
+    //             Token::IDENT(String::from("b")),
+    //             Token::Delimiter(DelimiterToken::SEMICOLON),
+    //             Token::Delimiter(DelimiterToken::RIGHT_BRACE),
+    //             Token::Delimiter(DelimiterToken::SEMICOLON),
+    //             Token::Keyword(KeywordToken::LET),
+    //             Token::IDENT(String::from("result")),
+    //             Token::Operator(OperatorToken::EQUAL),
+    //             Token::IDENT(String::from("add")),
+    //             Token::Delimiter(DelimiterToken::LEFT_PAREN),
+    //             Token::IDENT(String::from("five")),
+    //             Token::Delimiter(DelimiterToken::COMMA),
+    //             Token::IDENT(String::from("ten")),
+    //             Token::Delimiter(DelimiterToken::RIGHT_PAREN),
+    //             Token::Delimiter(DelimiterToken::SEMICOLON),
+    //             Token::Keyword(KeywordToken::EOF),
+    //         ];
+    //
+    //         let mut s = Scanner::new(source);
+    //         for test_case in test_cases {
+    //             let token = s.next_token();
+    //             assert_eq!(test_case, token);
+    //         }
+    //     }
 
     #[test]
     fn test_char_zero() {

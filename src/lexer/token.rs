@@ -1,7 +1,7 @@
 #[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 #[derive(Debug, Clone, PartialEq)]
 pub(super) enum Token {
-    IDENT(String),
+    Ident(String),
     Keyword(KeywordToken),
     Delimiter(DelimiterToken),
     Operator(OperatorToken),
@@ -18,7 +18,6 @@ pub(super) enum KeywordToken {
     RETURN,
     TRUE,
     FALSE,
-    EOF,
 }
 
 #[allow(non_camel_case_types)]
