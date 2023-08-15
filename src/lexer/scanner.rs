@@ -60,34 +60,31 @@ impl Scanner {
             '=' => {
                 if self.peek() == '=' {
                     self.read_char();
-                    Some(Token::Operator(OperatorToken::EQUAL_EQUAL))
-                } else {
-                    Some(Token::Operator(OperatorToken::EQUAL))
+                    return Some(Token::Operator(OperatorToken::EQUAL_EQUAL));
                 }
+
+                Some(Token::Operator(OperatorToken::EQUAL))
             }
             '!' => {
                 if self.peek() == '=' {
                     self.read_char();
-                    Some(Token::Operator(OperatorToken::BANG_EQUAL))
-                } else {
-                    Some(Token::Operator(OperatorToken::BANG))
+                    return Some(Token::Operator(OperatorToken::BANG_EQUAL));
                 }
+                Some(Token::Operator(OperatorToken::BANG))
             }
             '>' => {
                 if self.peek() == '=' {
                     self.read_char();
-                    Some(Token::Operator(OperatorToken::GREATER_EQUAL))
-                } else {
-                    Some(Token::Operator(OperatorToken::GREATER))
+                    return Some(Token::Operator(OperatorToken::GREATER_EQUAL));
                 }
+                Some(Token::Operator(OperatorToken::GREATER))
             }
             '<' => {
                 if self.peek() == '=' {
                     self.read_char();
-                    Some(Token::Operator(OperatorToken::LESS_EQUAL))
-                } else {
-                    Some(Token::Operator(OperatorToken::LESS))
+                    return Some(Token::Operator(OperatorToken::LESS_EQUAL));
                 }
+                Some(Token::Operator(OperatorToken::LESS))
             }
             ';' => Some(Token::Delimiter(DelimiterToken::SEMICOLON)),
             '(' => Some(Token::Delimiter(DelimiterToken::LEFT_PAREN)),
@@ -102,7 +99,7 @@ impl Scanner {
             }
             _ => {
                 println!("ch: {:?}", ch);
-                // check if keywork
+                // check if keyword
                 if ch.is_alphabetic() {
                     let start = self.current - 1;
 
