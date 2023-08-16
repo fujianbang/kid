@@ -1,5 +1,10 @@
 mod lexer;
 
+use lexer::lexer;
+
 fn main() {
-    println!("{:?}", std::env::current_dir());
+    let source = "let abc = \"abc\";";
+
+    let tokens = lexer(source);
+    println!("{:?}", tokens);
 }

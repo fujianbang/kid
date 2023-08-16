@@ -1,7 +1,7 @@
 use super::token::*;
 
 #[derive(Debug, Clone)]
-struct Scanner {
+pub struct Scanner {
     source: String,
     last: usize,
     current: usize,
@@ -10,7 +10,7 @@ struct Scanner {
 
 impl Scanner {
     /// create new lexer scanner
-    fn new(input: &str) -> Self {
+    pub fn new(input: &str) -> Self {
         let source = input.to_string();
         Self {
             source,
@@ -37,14 +37,14 @@ impl Scanner {
     }
 
     /// retrieve the next Token
-    fn next_token(&mut self) -> Option<Token> {
+    pub fn next_token(&mut self) -> Option<Token> {
         if self.is_at_end() {
-            println!("EOF");
+            // println!("EOF");
             return None;
         }
 
         let ch = self.read_char();
-        println!("ch: {:?}", ch);
+        // println!("ch: {:?}", ch);
 
         match ch {
             ' ' | '\t' | '\r' => self.next_token(),
@@ -98,7 +98,7 @@ impl Scanner {
                 Some(token)
             }
             _ => {
-                println!("ch: {:?}", ch);
+                // println!("ch: {:?}", ch);
                 // check if keyword
                 if ch.is_alphabetic() {
                     let start = self.current - 1;
@@ -109,10 +109,10 @@ impl Scanner {
 
                     let plain = self.source.get(start..self.current).unwrap();
 
-                    println!(
-                        "plain: {:?}, start: {}, current: {}",
-                        plain, start, self.current
-                    );
+                    // println!(
+                    //     "plain: {:?}, start: {}, current: {}",
+                    //     plain, start, self.current
+                    // );
 
                     if let Some(keyword) = is_keyword(plain) {
                         return Some(Token::Keyword(keyword));
@@ -129,7 +129,7 @@ impl Scanner {
     fn parse_string(&mut self) -> Token {
         let mut s = String::new();
         while self.peek() != '"' {
-            println!("peek: {:?}", self.peek());
+            // println!("peek: {:?}", self.peek());
             if self.peek() == '\n' {
                 self.line += 1;
             }
